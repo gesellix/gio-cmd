@@ -19,6 +19,21 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
+// windowsFixedVersion packs a version into the dwFileVersionMS and
+// dwFileVersionLS pair of VS_FIXEDFILEINFO, where each of the four components
+// occupies one 16-bit half:
+//
+//	MS = major<<16 | minor
+//	LS = patch<<16 | versioncode
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+func windowsFixedVersion(v Semver) [2]uint32 {
+	return [2]uint32{
+		uint32(v.Major)<<16 | uint32(v.Minor),
+		uint32(v.Patch)<<16 | v.VersionCode,
+	}
+}
+
 func buildWindows(tmpDir string, bi *buildInfo) error {
 	builder := &windowsBuilder{TempDir: tmpDir}
 	builder.DestDir = *destPath
@@ -56,7 +71,7 @@ func buildWindows(tmpDir string, bi *buildInfo) error {
 		}
 
 		if err := builder.embedInfo(windowsResources{
-			Version:      [2]uint32{uint32(bi.version.Major), uint32(bi.version.Minor)<<16 | uint32(bi.version.Patch)},
+			Version:      windowsFixedVersion(bi.version),
 			VersionHuman: bi.version.String(),
 			Name:         name,
 			Language:     0x0400, // Process Default Language: https://docs.microsoft.com/en-us/previous-versions/ms957130(v=msdn.10)
