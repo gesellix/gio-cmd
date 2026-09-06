@@ -145,6 +145,10 @@ func (b *macBuilder) setInfo(buildInfo *buildInfo, name string) {
 	<string>icon.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>{{.Bundle}}</string>
+	<key>CFBundleShortVersionString</key>
+	<string>{{.Version.StringCompact}}</string>
+	<key>CFBundleVersion</key>
+	<string>{{.Version.VersionCode}}</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>CFBundlePackageType</key>
