@@ -40,6 +40,8 @@ func TestVersion(t *testing.T) {
 		{"v10.21.333.12", false},
 		{"1.2.3", false},
 		{"1.2.3.4", true},
+		// Android version codes don't fit in 16 bits.
+		{"0.0.1.20241024", true},
 	}
 
 	for i, test := range tests {
