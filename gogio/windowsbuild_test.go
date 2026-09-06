@@ -31,3 +31,34 @@ func TestWindowsFixedVersion(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckWindowsVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		version string
+		valid   bool
+	}{
+		{"1.2.3.4", true},
+		{"65535.65535.65535.65535", true},
+		{"65536.0.0.0", false},
+		{"0.65536.0.0", false},
+		{"0.0.65536.0", false},
+		// A version code Android accepts, but Windows cannot represent.
+		{"0.0.1.20241024", false},
+	}
+
+	for i, test := range tests {
+		ver, err := parseSemver(test.version)
+		if err != nil {
+			t.Errorf("(%d): %q failed to parse: %v", i, test.version, err)
+			continue
+		}
+		switch err := checkWindowsVersion(ver); {
+		case err != nil && test.valid:
+			t.Errorf("(%d): %q was rejected: %v", i, test.version, err)
+		case err == nil && !test.valid:
+			t.Errorf("(%d): %q was unexpectedly accepted", i, test.version)
+		}
+	}
+}
