@@ -235,9 +235,12 @@ func exeIOS(tmpDir, target, app string, bi *buildInfo) error {
 	if _, err := runCmd(lipo); err != nil {
 		return err
 	}
-	infoPlist := buildInfoPlist(bi)
+	infoPlist, err := mergePlistFile([]byte(buildInfoPlist(bi)), bi.plistPath, iosPlistFixed(bi))
+	if err != nil {
+		return err
+	}
 	plistFile := filepath.Join(app, "Info.plist")
-	if err := os.WriteFile(plistFile, []byte(infoPlist), 0o660); err != nil {
+	if err := os.WriteFile(plistFile, infoPlist, 0o660); err != nil {
 		return err
 	}
 	if _, err := os.Stat(bi.iconPath); err == nil {
@@ -338,6 +341,23 @@ func iosIcons(bi *buildInfo, tmpDir, appDir, icon string) (string, error) {
 		assets)
 	_, err = runCmd(compile)
 	return assetPlist, err
+}
+
+// iosPlistFixed returns the Info.plist keys that buildInfoPlist sets
+// from flags, with the flag.
+func iosPlistFixed(bi *buildInfo) map[string]string {
+	fixed := map[string]string{
+		"CFBundleExecutable":         "-name",
+		"CFBundleName":               "-name",
+		"CFBundleIdentifier":         "-appid",
+		"CFBundleShortVersionString": "-version",
+		"CFBundleVersion":            "-version",
+		"MinimumOSVersion":           "-minsdk",
+	}
+	if len(bi.schemes) > 0 {
+		fixed["CFBundleURLTypes"] = "-schemes"
+	}
+	return fixed
 }
 
 func buildInfoPlist(bi *buildInfo) string {

@@ -43,6 +43,7 @@ var (
 	notaryTeamID  = flag.String("notaryteamid", "", "specify the team id to use for notarization.")
 	schemes       = flag.String("schemes", "", "specify a list of comma separated URL schemes that the program accepts")
 	pkgQueries    = flag.String("queries", "", "specify a list of comma separated package names used to query other apps on Android.")
+	plistPath     = flag.String("plist", "", "specify a property list whose top-level keys are added to the generated Info.plist (ios, tvos, macos).")
 )
 
 func main() {
@@ -83,6 +84,9 @@ func flagValidate() error {
 	case "archive", "exe":
 	default:
 		return fmt.Errorf("invalid -buildmode %s", *buildMode)
+	}
+	if *plistPath != "" && (*buildMode != "exe" || (*target != "ios" && *target != "tvos" && *target != "macos")) {
+		return errors.New("-plist is supported for -buildmode exe and -target ios, tvos or macos only")
 	}
 	return nil
 }

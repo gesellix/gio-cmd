@@ -64,6 +64,13 @@ version is 13, for tvOS too.
 For Android builds the -targetsdk flag specify the target SDK level. For example,
 use -targetsdk 33 to target Android 13 (Tiramisu) and later.
 
+The -plist flag specifies a property list file for iOS, tvOS and macOS builds.
+The keys of its top-level dictionary are added to the generated Info.plist,
+for example usage descriptions such as NSLocalNetworkUsageDescription. A key
+replaces a generated one of the same name, except for the keys that flags set
+(the bundle name, executable, identifier, versions, minimum OS version, and
+the URL types of -schemes), which are errors.
+
 The -work flag prints the path to the working directory and suppress
 its deletion.
 

@@ -15,7 +15,9 @@ func TestMacInfoPlistVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	var b macBuilder
-	b.setInfo(&buildInfo{appID: "com.example.app", version: ver}, "app")
+	if err := b.setInfo(&buildInfo{appID: "com.example.app", version: ver}, "app"); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, want := range []string{
 		"<key>CFBundleShortVersionString</key>\n\t<string>1.2.3</string>",

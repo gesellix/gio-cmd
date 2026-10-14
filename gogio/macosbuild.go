@@ -35,7 +35,9 @@ func buildMac(tmpDir string, bi *buildInfo) error {
 		return err
 	}
 
-	builder.setInfo(bi, name)
+	if err := builder.setInfo(bi, name); err != nil {
+		return err
+	}
 
 	for _, arch := range bi.archs {
 		tmpDest := filepath.Join(builder.TempDir, filepath.Base(builder.DestDir))
@@ -121,7 +123,7 @@ func (b *macBuilder) setIcon(path string) (err error) {
 	return err
 }
 
-func (b *macBuilder) setInfo(buildInfo *buildInfo, name string) {
+func (b *macBuilder) setInfo(buildInfo *buildInfo, name string) error {
 
 	manifestSrc := struct {
 		Name    string
@@ -176,7 +178,19 @@ func (b *macBuilder) setInfo(buildInfo *buildInfo, name string) {
 	if err := t.Execute(&manifest, manifestSrc); err != nil {
 		panic(err)
 	}
-	b.Manifest = manifest.Bytes()
+	fixed := map[string]string{
+		"CFBundleExecutable":         "-name or -o",
+		"CFBundleIdentifier":         "-appid",
+		"CFBundleShortVersionString": "-version",
+		"CFBundleVersion":            "-version",
+	}
+	if len(buildInfo.schemes) > 0 {
+		fixed["CFBundleURLTypes"] = "-schemes"
+	}
+	b.Manifest, err = mergePlistFile(manifest.Bytes(), buildInfo.plistPath, fixed)
+	if err != nil {
+		return err
+	}
 
 	b.Entitlements = []byte(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -188,6 +202,7 @@ func (b *macBuilder) setInfo(buildInfo *buildInfo, name string) {
 <true/>
 </dict>
 </plist>`)
+	return nil
 }
 
 func (b *macBuilder) buildProgram(buildInfo *buildInfo, binDest string, name string, arch string) error {
