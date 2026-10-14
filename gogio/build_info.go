@@ -34,6 +34,7 @@ type buildInfo struct {
 	schemes        []string
 	packageQueries []string
 	plistPath      string
+	manifestPath   string
 	privacyPath    string
 }
 
@@ -85,6 +86,7 @@ func newBuildInfo(pkgPath string) (*buildInfo, error) {
 		schemes:        getCommaList(*schemes),
 		packageQueries: getCommaList(*pkgQueries),
 		plistPath:      *plistPath,
+		manifestPath:   *manifestPath,
 		privacyPath:    *privacyPath,
 	}
 	return bi, nil

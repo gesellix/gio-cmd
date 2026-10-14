@@ -76,6 +76,15 @@ builds, a property list that gogio adds to the app as PrivacyInfo.xcprivacy.
 It declares the reasons for the APIs that Apple requires one for (for
 example file timestamps, which os.Stat reads) and the data the app collects.
 
+The -manifest flag specifies an AndroidManifest.xml fragment for Android
+builds: a <manifest> element declaring the android namespace. Its attributes
+and child elements are added to the generated <manifest>, and the attributes
+and child elements of its <application> element to the generated
+<application>, for example <uses-permission> elements, receivers or services.
+Attributes that flags set (package, versionCode, versionName, and the label
+and icon of the application), <uses-sdk> and the org.gioui.GioActivity
+activity are errors. Permissions that gogio adds already are left out.
+
 The -work flag prints the path to the working directory and suppress
 its deletion.
 

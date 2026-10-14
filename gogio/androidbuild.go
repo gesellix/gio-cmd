@@ -53,6 +53,7 @@ type manifestData struct {
 	PackageQueries []string
 	// Foreground declares the service app.StartForeground starts.
 	Foreground bool
+	Extra      manifestExtra
 }
 
 const (
@@ -440,6 +441,24 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 	// Link APK.
 	permissions, features := getPermissions(perms)
 	appName := UppercaseName(bi.name)
+	fixed := manifestFixed{
+		manifestAttrs: map[string]string{
+			"package":             "-appid",
+			"android:versionCode": "-version",
+			"android:versionName": "-version",
+		},
+		appAttrs: map[string]string{
+			"android:label": "-name",
+		},
+		permissions: permissions,
+	}
+	if iconSnip != "" {
+		fixed.appAttrs["android:icon"] = "-icon"
+	}
+	extra, err := parseManifestExtraFile(bi.manifestPath, fixed)
+	if err != nil {
+		return err
+	}
 	manifestSrc := manifestData{
 		AppID:          bi.appID,
 		Version:        bi.version,
@@ -452,13 +471,14 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 		Schemes:        bi.schemes,
 		PackageQueries: bi.packageQueries,
 		Foreground:     slices.Contains(perms, "foreground"),
+		Extra:          extra,
 	}
 	tmpl, err := template.New("test").Parse(
 		`<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	package="{{.AppID}}"
 	android:versionCode="{{.Version.VersionCode}}"
-	android:versionName="{{.Version}}">
+	android:versionName="{{.Version}}"{{.Extra.ManifestAttrs}}>
 	{{if .PackageQueries}}
  	<queries>
 	    {{range .PackageQueries}}
@@ -469,7 +489,7 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 	<uses-sdk android:minSdkVersion="{{.MinSDK}}" android:targetSdkVersion="{{.TargetSDK}}" />
 {{range .Permissions}}	<uses-permission android:name="{{.}}"/>
 {{end}}{{range .Features}}	<uses-feature android:{{.}} android:required="false"/>
-{{end}}	<application {{.IconSnip}} android:label="{{.AppName}}">
+{{end}}{{.Extra.Manifest}}	<application {{.IconSnip}} android:label="{{.AppName}}"{{.Extra.AppAttrs}}>
 		<activity android:name="org.gioui.GioActivity"
 			android:label="{{.AppName}}"
 			android:theme="@style/Theme.GioApp"
@@ -498,7 +518,7 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 				android:value="Keeps the app running in the background, as the app asked"/>
 		</service>
 		{{end}}
-	</application>
+{{.Extra.App}}	</application>
 </manifest>`)
 	var manifestBuffer bytes.Buffer
 	if err := tmpl.Execute(&manifestBuffer, manifestSrc); err != nil {
