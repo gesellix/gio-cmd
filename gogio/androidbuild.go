@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -50,6 +51,8 @@ type manifestData struct {
 	AppName        string
 	Schemes        []string
 	PackageQueries []string
+	// Foreground declares the service app.StartForeground starts.
+	Foreground bool
 }
 
 const (
@@ -448,6 +451,7 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 		AppName:        appName,
 		Schemes:        bi.schemes,
 		PackageQueries: bi.packageQueries,
+		Foreground:     slices.Contains(perms, "foreground"),
 	}
 	tmpl, err := template.New("test").Parse(
 		`<?xml version="1.0" encoding="utf-8"?>
@@ -486,6 +490,14 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 			</intent-filter>
 			{{end}}
 		</activity>
+		{{if .Foreground}}
+		<service android:name="org.gioui.GioForegroundService"
+			android:foregroundServiceType="specialUse"
+			android:exported="false">
+			<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+				android:value="Keeps the app running in the background, as the app asked"/>
+		</service>
+		{{end}}
 	</application>
 </manifest>`)
 	var manifestBuffer bytes.Buffer
