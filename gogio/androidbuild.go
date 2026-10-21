@@ -889,20 +889,22 @@ func latestPlatform(sdk string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var bestVer int
+	var bestVer, bestMinor int
 	var bestPlat string
 	for _, platform := range allPlats {
 		_, name := filepath.Split(platform)
-		// The glob above guarantees the "android-" prefix.
-		verStr := name[len("android-"):]
+		// The glob above guarantees the "android-" prefix. Newer SDK managers
+		// name a platform by API level and minor version: android-37.0.
+		verStr, minorStr, _ := strings.Cut(name[len("android-"):], ".")
 		ver, err := strconv.Atoi(verStr)
 		if err != nil {
 			continue
 		}
-		if ver < bestVer {
+		minor, _ := strconv.Atoi(minorStr)
+		if ver < bestVer || ver == bestVer && minor < bestMinor {
 			continue
 		}
-		bestVer = ver
+		bestVer, bestMinor = ver, minor
 		bestPlat = platform
 	}
 	if bestPlat == "" {
