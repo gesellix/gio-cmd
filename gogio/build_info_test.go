@@ -59,3 +59,15 @@ func TestVersion(t *testing.T) {
 		}
 	}
 }
+
+func TestQuoteArg(t *testing.T) {
+	for in, want := range map[string]string{
+		"pkg.v=sh|--window":             "pkg.v=sh|--window",
+		"pkg.v=sh|--tab|skywire --help": "'pkg.v=sh|--tab|skywire --help'",
+		"pkg.v=it's here":               `"pkg.v=it's here"`,
+	} {
+		if got := quoteArg(in); got != want {
+			t.Errorf("quoteArg(%q) = %s, want %s", in, got, want)
+		}
+	}
+}

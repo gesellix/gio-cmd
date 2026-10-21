@@ -148,7 +148,7 @@ func getLdFlags(appID string) string {
 	ldflags = append(ldflags, fmt.Sprintf("-X gioui.org/app/internal/log.appID=%s", appID))
 	// Pass along all remaining arguments to the app.
 	if appArgs := flag.Args()[1:]; len(appArgs) > 0 {
-		ldflags = append(ldflags, fmt.Sprintf("-X gioui.org/app.extraArgs=%s", strings.Join(appArgs, "|")))
+		ldflags = append(ldflags, "-X", quoteArg("gioui.org/app.extraArgs="+strings.Join(appArgs, "|")))
 	}
 	if m := *linkMode; m != "" {
 		ldflags = append(ldflags, "-linkmode="+m)
@@ -222,4 +222,18 @@ func getAppID(pkgMetadata *packageMetadata) string {
 
 func getPkgName(pkgMetadata *packageMetadata) string {
 	return path.Base(pkgMetadata.PkgPath)
+}
+
+// quoteArg quotes s for -ldflags, which the go command splits at spaces
+// except within single or double quotes, so an app argument such as
+// "skywire --help" stays one.
+func quoteArg(s string) string {
+	switch {
+	case !strings.ContainsAny(s, " \t\n'\""):
+		return s
+	case !strings.Contains(s, "'"):
+		return "'" + s + "'"
+	default:
+		return `"` + s + `"`
+	}
 }
