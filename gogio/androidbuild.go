@@ -110,6 +110,7 @@ func buildAndroid(tmpDir string, bi *buildInfo) error {
 			"GOOS=android",
 			"CGO_ENABLED=1",
 		),
+		BuildFlags: []string{"-tags", bi.tags},
 	}
 	pkgs, err := packages.Load(cfg, bi.pkgPath)
 	if err != nil {
