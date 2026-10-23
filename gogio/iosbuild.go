@@ -243,6 +243,9 @@ func exeIOS(tmpDir, target, app string, bi *buildInfo) error {
 	if err := os.WriteFile(plistFile, infoPlist, 0o660); err != nil {
 		return err
 	}
+	if err := copyPrivacyManifest(app, bi.privacyPath); err != nil {
+		return err
+	}
 	if _, err := os.Stat(bi.iconPath); err == nil {
 		assetPlist, err := iosIcons(bi, tmpDir, app, bi.iconPath)
 		if err != nil {

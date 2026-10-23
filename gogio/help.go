@@ -71,6 +71,11 @@ replaces a generated one of the same name, except for the keys that flags set
 (the bundle name, executable, identifier, versions, minimum OS version, and
 the URL types of -schemes), which are errors.
 
+The -privacymanifest flag specifies Apple's privacy manifest for iOS and tvOS
+builds, a property list that gogio adds to the app as PrivacyInfo.xcprivacy.
+It declares the reasons for the APIs that Apple requires one for (for
+example file timestamps, which os.Stat reads) and the data the app collects.
+
 The -work flag prints the path to the working directory and suppress
 its deletion.
 

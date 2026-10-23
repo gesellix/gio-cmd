@@ -44,6 +44,7 @@ var (
 	schemes       = flag.String("schemes", "", "specify a list of comma separated URL schemes that the program accepts")
 	pkgQueries    = flag.String("queries", "", "specify a list of comma separated package names used to query other apps on Android.")
 	plistPath     = flag.String("plist", "", "specify a property list whose top-level keys are added to the generated Info.plist (ios, tvos, macos).")
+	privacyPath   = flag.String("privacymanifest", "", "specify a privacy manifest that is added to the app as PrivacyInfo.xcprivacy (ios, tvos).")
 )
 
 func main() {
@@ -87,6 +88,9 @@ func flagValidate() error {
 	}
 	if *plistPath != "" && (*buildMode != "exe" || (*target != "ios" && *target != "tvos" && *target != "macos")) {
 		return errors.New("-plist is supported for -buildmode exe and -target ios, tvos or macos only")
+	}
+	if *privacyPath != "" && (*buildMode != "exe" || (*target != "ios" && *target != "tvos")) {
+		return errors.New("-privacymanifest is supported for -buildmode exe and -target ios or tvos only")
 	}
 	return nil
 }

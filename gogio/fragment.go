@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 )
 
@@ -136,4 +137,22 @@ func mergePlistFile(base []byte, path string, fixed map[string]string) ([]byte, 
 		return nil, fmt.Errorf("-plist %s: %w", path, err)
 	}
 	return merged, nil
+}
+
+// copyPrivacyManifest copies the privacy manifest at path into the app
+// bundle as PrivacyInfo.xcprivacy, where Apple expects it. It
+// must be a property list in XML format with a dictionary; an empty path
+// adds nothing.
+func copyPrivacyManifest(app, path string) error {
+	if path == "" {
+		return nil
+	}
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if _, err := parsePlistDict(src); err != nil {
+		return fmt.Errorf("-privacymanifest %s: %w", path, err)
+	}
+	return os.WriteFile(filepath.Join(app, "PrivacyInfo.xcprivacy"), src, 0o644)
 }

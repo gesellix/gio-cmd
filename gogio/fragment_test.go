@@ -3,6 +3,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -131,5 +133,40 @@ func TestIOSInfoPlistFixed(t *testing.T) {
 	}
 	if !strings.Contains(string(merged), "<key>UIApplicationSceneManifest</key>\n\t<dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>") {
 		t.Errorf("scene manifest missing:\n%s", merged)
+	}
+}
+
+func TestCopyPrivacyManifest(t *testing.T) {
+	dir := t.TempDir()
+	app := filepath.Join(dir, "Test.app")
+	if err := os.Mkdir(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyPrivacyManifest(app, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(app, "PrivacyInfo.xcprivacy")); !os.IsNotExist(err) {
+		t.Fatalf("no path, but a manifest was added: %v", err)
+	}
+
+	valid := filepath.Join(dir, "valid.xcprivacy")
+	src := `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>NSPrivacyTracking</key><false/></dict></plist>`
+	if err := os.WriteFile(valid, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyPrivacyManifest(app, valid); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(filepath.Join(app, "PrivacyInfo.xcprivacy")); err != nil || string(got) != src {
+		t.Fatalf("copied %q, %v", got, err)
+	}
+
+	invalid := filepath.Join(dir, "invalid.xcprivacy")
+	if err := os.WriteFile(invalid, []byte(`<dict/>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyPrivacyManifest(app, invalid); err == nil || !strings.Contains(err.Error(), "-privacymanifest") {
+		t.Errorf("a manifest that is no property list: %v", err)
 	}
 }

@@ -34,6 +34,7 @@ type buildInfo struct {
 	schemes        []string
 	packageQueries []string
 	plistPath      string
+	privacyPath    string
 }
 
 type Semver struct {
@@ -84,6 +85,7 @@ func newBuildInfo(pkgPath string) (*buildInfo, error) {
 		schemes:        getCommaList(*schemes),
 		packageQueries: getCommaList(*pkgQueries),
 		plistPath:      *plistPath,
+		privacyPath:    *privacyPath,
 	}
 	return bi, nil
 }
