@@ -33,6 +33,8 @@ type buildInfo struct {
 	notaryTeamID   string
 	schemes        []string
 	packageQueries []string
+	// platform holds the complete platform files of the build.
+	platform *platformFiles
 }
 
 type Semver struct {
@@ -45,7 +47,22 @@ func newBuildInfo(pkgPath string) (*buildInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	pdir := *platformDir
+	if pdir == "" {
+		pdir = pkgMetadata.Dir
+	}
+	platform, err := findPlatformFiles(pdir, *target)
+	if err != nil {
+		return nil, err
+	}
 	appID := getAppID(pkgMetadata)
+	if platform.appID != "" {
+		appID = platform.appID
+	}
+	sdk := *minsdk
+	if platform.minsdk != 0 {
+		sdk = platform.minsdk
+	}
 	appIcon := filepath.Join(pkgMetadata.Dir, "appicon.png")
 	if *iconPath != "" {
 		appIcon = *iconPath
@@ -66,7 +83,7 @@ func newBuildInfo(pkgPath string) (*buildInfo, error) {
 		appID:          appID,
 		archs:          getArchs(),
 		ldflags:        getLdFlags(appID),
-		minsdk:         *minsdk,
+		minsdk:         sdk,
 		targetsdk:      *targetsdk,
 		name:           appName,
 		pkgDir:         pkgMetadata.Dir,
@@ -82,6 +99,7 @@ func newBuildInfo(pkgPath string) (*buildInfo, error) {
 		notaryTeamID:   *notaryTeamID,
 		schemes:        getCommaList(*schemes),
 		packageQueries: getCommaList(*pkgQueries),
+		platform:       platform,
 	}
 	return bi, nil
 }

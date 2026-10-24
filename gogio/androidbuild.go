@@ -438,74 +438,8 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 	}
 
 	// Link APK.
-	permissions, features := getPermissions(perms)
-	appName := UppercaseName(bi.name)
-	manifestSrc := manifestData{
-		AppID:          bi.appID,
-		Version:        bi.version,
-		MinSDK:         minSDK,
-		TargetSDK:      targetSDK,
-		Permissions:    permissions,
-		Features:       features,
-		IconSnip:       iconSnip,
-		AppName:        appName,
-		Schemes:        bi.schemes,
-		PackageQueries: bi.packageQueries,
-		Foreground:     slices.Contains(perms, "foreground"),
-	}
-	tmpl, err := template.New("test").Parse(
-		`<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	package="{{.AppID}}"
-	android:versionCode="{{.Version.VersionCode}}"
-	android:versionName="{{.Version}}">
-	{{if .PackageQueries}}
- 	<queries>
-	    {{range .PackageQueries}}
-        <package android:name="{{.}}" />
-        {{end}}
-    </queries>
-	{{end}}
-	<uses-sdk android:minSdkVersion="{{.MinSDK}}" android:targetSdkVersion="{{.TargetSDK}}" />
-{{range .Permissions}}	<uses-permission android:name="{{.}}"/>
-{{end}}{{range .Features}}	<uses-feature android:{{.}} android:required="false"/>
-{{end}}	<application {{.IconSnip}} android:label="{{.AppName}}">
-		<activity android:name="org.gioui.GioActivity"
-			android:label="{{.AppName}}"
-			android:theme="@style/Theme.GioApp"
-			android:configChanges="screenSize|screenLayout|smallestScreenSize|orientation|keyboardHidden"
-			android:windowSoftInputMode="adjustResize"
-			android:launchMode="singleInstance"
-			android:exported="true">
-			<intent-filter>
-				<action android:name="android.intent.action.MAIN" />
-				<category android:name="android.intent.category.LAUNCHER" />
-			</intent-filter>
-			{{range .Schemes}}
-			<intent-filter>
-				<action android:name="android.intent.action.VIEW"></action>
-				<category android:name="android.intent.category.DEFAULT"></category>
-				<category android:name="android.intent.category.BROWSABLE"></category>
-				<data android:scheme="{{.}}"></data>
-			</intent-filter>
-			{{end}}
-		</activity>
-		{{if .Foreground}}
-		<service android:name="org.gioui.GioForegroundService"
-			android:foregroundServiceType="specialUse"
-			android:exported="false">
-			<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-				android:value="Keeps the app running in the background, as the app asked"/>
-		</service>
-		{{end}}
-	</application>
-</manifest>`)
-	var manifestBuffer bytes.Buffer
-	if err := tmpl.Execute(&manifestBuffer, manifestSrc); err != nil {
-		return err
-	}
-	manifest := filepath.Join(tmpDir, "AndroidManifest.xml")
-	if err := os.WriteFile(manifest, manifestBuffer.Bytes(), 0o660); err != nil {
+	manifest, err := androidManifest(tmpDir, bi, perms, minSDK, targetSDK, iconSnip)
+	if err != nil {
 		return err
 	}
 
@@ -1075,4 +1009,84 @@ func (w *errWriter) Write(p []byte) (n int, err error) {
 	n, err = w.w.Write(p)
 	*w.err = err
 	return
+}
+
+// androidManifest returns the path of the AndroidManifest.xml of an app:
+// the complete one of the platform files, or one generated from the build
+// flags and the permissions of the imported packages.
+func androidManifest(tmpDir string, bi *buildInfo, perms []string, minSDK, targetSDK int, iconSnip string) (string, error) {
+	if m := bi.platform.manifest; m != "" {
+		return m, nil
+	}
+	permissions, features := getPermissions(perms)
+	appName := UppercaseName(bi.name)
+	manifestSrc := manifestData{
+		AppID:          bi.appID,
+		Version:        bi.version,
+		MinSDK:         minSDK,
+		TargetSDK:      targetSDK,
+		Permissions:    permissions,
+		Features:       features,
+		IconSnip:       iconSnip,
+		AppName:        appName,
+		Schemes:        bi.schemes,
+		PackageQueries: bi.packageQueries,
+		Foreground:     slices.Contains(perms, "foreground"),
+	}
+	tmpl, err := template.New("test").Parse(
+		`<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="{{.AppID}}"
+	android:versionCode="{{.Version.VersionCode}}"
+	android:versionName="{{.Version}}">
+	{{if .PackageQueries}}
+ 	<queries>
+	    {{range .PackageQueries}}
+        <package android:name="{{.}}" />
+        {{end}}
+    </queries>
+	{{end}}
+	<uses-sdk android:minSdkVersion="{{.MinSDK}}" android:targetSdkVersion="{{.TargetSDK}}" />
+{{range .Permissions}}	<uses-permission android:name="{{.}}"/>
+{{end}}{{range .Features}}	<uses-feature android:{{.}} android:required="false"/>
+{{end}}	<application {{.IconSnip}} android:label="{{.AppName}}">
+		<activity android:name="org.gioui.GioActivity"
+			android:label="{{.AppName}}"
+			android:theme="@style/Theme.GioApp"
+			android:configChanges="screenSize|screenLayout|smallestScreenSize|orientation|keyboardHidden"
+			android:windowSoftInputMode="adjustResize"
+			android:launchMode="singleInstance"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+			{{range .Schemes}}
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW"></action>
+				<category android:name="android.intent.category.DEFAULT"></category>
+				<category android:name="android.intent.category.BROWSABLE"></category>
+				<data android:scheme="{{.}}"></data>
+			</intent-filter>
+			{{end}}
+		</activity>
+		{{if .Foreground}}
+		<service android:name="org.gioui.GioForegroundService"
+			android:foregroundServiceType="specialUse"
+			android:exported="false">
+			<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+				android:value="Keeps the app running in the background, as the app asked"/>
+		</service>
+		{{end}}
+	</application>
+</manifest>`)
+	if err != nil {
+		return "", err
+	}
+	var manifestBuffer bytes.Buffer
+	if err := tmpl.Execute(&manifestBuffer, manifestSrc); err != nil {
+		return "", err
+	}
+	manifest := filepath.Join(tmpDir, "AndroidManifest.xml")
+	return manifest, os.WriteFile(manifest, manifestBuffer.Bytes(), 0o660)
 }

@@ -36,6 +36,15 @@ func buildMac(tmpDir string, bi *buildInfo) error {
 	}
 
 	builder.setInfo(bi, name)
+	exe := name
+	if m := bi.platform.manifest; m != "" {
+		manifest, err := os.ReadFile(m)
+		if err != nil {
+			return err
+		}
+		builder.Manifest = manifest
+		exe = bi.platform.executable
+	}
 
 	for _, arch := range bi.archs {
 		tmpDest := filepath.Join(builder.TempDir, filepath.Base(builder.DestDir))
@@ -45,7 +54,7 @@ func buildMac(tmpDir string, bi *buildInfo) error {
 			finalDest = filepath.Join(builder.DestDir, name+"_"+arch+".app")
 		}
 
-		if err := builder.buildProgram(bi, tmpDest, name, arch); err != nil {
+		if err := builder.buildProgram(bi, tmpDest, exe, arch); err != nil {
 			return err
 		}
 
