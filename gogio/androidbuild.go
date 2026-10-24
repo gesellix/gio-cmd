@@ -508,6 +508,10 @@ func exeAndroid(tmpDir string, tools *androidTools, bi *buildInfo, extraJars, pe
 	if err := os.WriteFile(manifest, manifestBuffer.Bytes(), 0o660); err != nil {
 		return err
 	}
+	if m := bi.platform.manifest; m != "" {
+		// The complete manifest replaces the generated one.
+		manifest = m
+	}
 
 	linkAPK := filepath.Join(tmpDir, "link.apk")
 

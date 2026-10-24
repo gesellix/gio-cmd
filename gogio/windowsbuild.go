@@ -83,6 +83,16 @@ func buildWindows(tmpDir string, bi *buildInfo) error {
 	}
 
 	for _, arch := range bi.archs {
+		if res := bi.platform.resources[arch]; res != "" {
+			if err := builder.useResource(bi, res, name, arch); err != nil {
+				return fmt.Errorf("can't use the resources: %v", err)
+			}
+			if err := builder.buildProgram(bi, name, arch); err != nil {
+				return err
+			}
+			continue
+		}
+
 		builder.Coff = coff.NewRSRC()
 		builder.Coff.Arch(arch)
 
@@ -237,6 +247,24 @@ func (b *windowsBuilder) buildResource(buildInfo *buildInfo, name string, arch s
 	}
 
 	return nil
+}
+
+// useResource puts the complete resource object res where go build links
+// it, as buildResource does with the generated one. A file in the package
+// directory is linked by go build itself.
+func (b *windowsBuilder) useResource(buildInfo *buildInfo, res, name, arch string) error {
+	dir, err := os.Stat(filepath.Dir(res))
+	if err != nil {
+		return err
+	}
+	pkg, err := os.Stat(buildInfo.pkgDir)
+	if err != nil {
+		return err
+	}
+	if os.SameFile(dir, pkg) {
+		return nil
+	}
+	return copyFile(filepath.Join(buildInfo.pkgDir, name+"_windows_"+arch+".syso"), res)
 }
 
 func (b *windowsBuilder) buildProgram(buildInfo *buildInfo, name string, arch string) error {

@@ -43,6 +43,7 @@ var (
 	notaryTeamID  = flag.String("notaryteamid", "", "specify the team id to use for notarization.")
 	schemes       = flag.String("schemes", "", "specify a list of comma separated URL schemes that the program accepts")
 	pkgQueries    = flag.String("queries", "", "specify a list of comma separated package names used to query other apps on Android.")
+	platformDir   = flag.String("platformdir", "", "specify a directory with complete platform files that replace the generated ones: AndroidManifest.xml, Info.plist or Info_<target>.plist, PrivacyInfo.xcprivacy or PrivacyInfo_<target>.xcprivacy, rsrc_windows_<arch>.syso (android, ios, tvos, macos, windows).")
 )
 
 func main() {

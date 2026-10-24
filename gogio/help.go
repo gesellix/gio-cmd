@@ -93,4 +93,17 @@ On Windows, it will restrict the program to a single instance.
 The -queries flag specifies a list of comma separated package names used to query other apps,
 that is useful to launch other apps and verify their presence. For example, use -queries 
 com.example.otherapp to query the app with that package name. It is only necessary on Android.
+
+The -platformdir flag specifies a directory with complete platform files, which
+gogio uses as they are instead of generating them. A file for one target is
+named with Go's postfix convention, a shared name is the fallback:
+AndroidManifest.xml (android); Info_ios.plist, Info_tvos.plist, Info_macos.plist
+or Info.plist; PrivacyInfo_ios.xcprivacy, PrivacyInfo_tvos.xcprivacy or
+PrivacyInfo.xcprivacy; and rsrc_windows_<arch>.syso (windows), a resource object
+with the application manifest, version information and icon. The app id and the
+minimum SDK come from the file, and on Apple platforms the name of the
+executable. Flags whose values only go into a generated file, such as -version
+and -schemes, are errors then. Start from the files gogio generates, kept with
+-work: a complete file has to refer to what Gio provides, such as the activity
+org.gioui.GioActivity or the theme @style/Theme.GioApp on Android.
 `
