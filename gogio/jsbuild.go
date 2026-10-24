@@ -90,6 +90,8 @@ func buildJS(bi *buildInfo) error {
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps,
 		Env:  append(os.Environ(), "GOOS=js", "GOARCH=wasm"),
+		// The same tags as the build.
+		BuildFlags: []string{"-tags", bi.tags},
 	}, bi.pkgPath)
 	if err != nil {
 		return err
