@@ -193,6 +193,9 @@ func exeIOS(tmpDir, target, app string, bi *buildInfo) error {
 		return err
 	}
 	appName := UppercaseName(bi.name)
+	if e := bi.platform.executable; e != "" {
+		appName = e
+	}
 	exe := filepath.Join(app, appName)
 	lipo := exec.Command("xcrun", "lipo", "-o", exe, "-create")
 	var builds errgroup.Group
@@ -235,10 +238,18 @@ func exeIOS(tmpDir, target, app string, bi *buildInfo) error {
 	if _, err := runCmd(lipo); err != nil {
 		return err
 	}
-	infoPlist := buildInfoPlist(bi)
 	plistFile := filepath.Join(app, "Info.plist")
-	if err := os.WriteFile(plistFile, []byte(infoPlist), 0o660); err != nil {
+	if m := bi.platform.manifest; m != "" {
+		if err := copyFile(plistFile, m); err != nil {
+			return err
+		}
+	} else if err := os.WriteFile(plistFile, []byte(buildInfoPlist(bi)), 0o660); err != nil {
 		return err
+	}
+	if p := bi.platform.privacy; p != "" {
+		if err := copyFile(filepath.Join(app, "PrivacyInfo.xcprivacy"), p); err != nil {
+			return err
+		}
 	}
 	if _, err := os.Stat(bi.iconPath); err == nil {
 		assetPlist, err := iosIcons(bi, tmpDir, app, bi.iconPath)
