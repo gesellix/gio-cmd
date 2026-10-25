@@ -154,3 +154,34 @@ func TestPlatformFilesFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestPlatformFilesIOSRequirements(t *testing.T) {
+	const scene = `<key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>`
+	plist := func(entries string) string {
+		return `<plist><dict><key>CFBundleExecutable</key><string>App</string><key>CFBundleIdentifier</key><string>org.example.app</string>` + entries + `</dict></plist>`
+	}
+	for _, tc := range []struct {
+		name    string
+		target  string
+		entries string
+		err     string
+	}{
+		{"complete", "ios", scene + `<key>MinimumOSVersion</key><string>13.0</string>`, ""},
+		{"tvOS", "tvos", scene + `<key>MinimumOSVersion</key><string>14.2</string>`, ""},
+		{"no scene manifest", "ios", `<key>MinimumOSVersion</key><string>15.0</string>`, "UIApplicationSceneManifest"},
+		{"scene manifest as a string", "ios", `<key>MinimumOSVersion</key><string>15.0</string><key>Other</key><string>UIApplicationSceneManifest</string>`, "UIApplicationSceneManifest"},
+		{"iOS 12", "ios", scene + `<key>MinimumOSVersion</key><string>12.4</string>`, "MinimumOSVersion"},
+		{"no minimum", "ios", scene, "MinimumOSVersion"},
+		{"macOS needs neither", "macos", "", ""},
+	} {
+		dir := t.TempDir()
+		writePlatformFile(t, dir, tc.target+"/Info.plist", plist(tc.entries))
+		_, err := findPlatformFiles(dir, tc.target)
+		switch {
+		case tc.err == "" && err != nil:
+			t.Errorf("%s: %v", tc.name, err)
+		case tc.err != "" && (err == nil || !strings.Contains(err.Error(), tc.err)):
+			t.Errorf("%s: got %v, want an error about %s", tc.name, err, tc.err)
+		}
+	}
+}

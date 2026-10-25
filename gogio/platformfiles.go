@@ -77,7 +77,7 @@ func findPlatformFiles(dir, target string) (*platformFiles, error) {
 		if pf.manifest, err = exists("Info.plist"); err != nil || pf.manifest == "" {
 			return pf, err
 		}
-		err = pf.readInfoPlist()
+		err = pf.readInfoPlist(target)
 	}
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (pf *platformFiles) readAndroidManifest() error {
 	return nil
 }
 
-func (pf *platformFiles) readInfoPlist() error {
+func (pf *platformFiles) readInfoPlist(target string) error {
 	data, err := os.ReadFile(pf.manifest)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (pf *platformFiles) readInfoPlist() error {
 	if bytes.HasPrefix(data, []byte("bplist")) {
 		return fmt.Errorf("%s: a binary property list; convert it with plutil -convert xml1", pf.manifest)
 	}
-	keys, err := plistStrings(data)
+	keys, present, err := plistTopLevel(data)
 	if err != nil {
 		return fmt.Errorf("%s: %v", pf.manifest, err)
 	}
@@ -153,23 +153,35 @@ func (pf *platformFiles) readInfoPlist() error {
 			return fmt.Errorf("%s: MinimumOSVersion %q is not a version", pf.manifest, v)
 		}
 	}
+	if target == "macos" {
+		return nil
+	}
+	// Gio needs the UIScene life cycle, which an app only gets with the
+	// scene manifest, and so iOS or tvOS 13.
+	if pf.minsdk < minIOSVersion {
+		return fmt.Errorf("%s: MinimumOSVersion must be %d.0 or later, which Gio needs", pf.manifest, minIOSVersion)
+	}
+	if !present["UIApplicationSceneManifest"] {
+		return fmt.Errorf("%s: UIApplicationSceneManifest is missing; without it the app starts without a window", pf.manifest)
+	}
 	return nil
 }
 
-// plistStrings returns the string values of the top-level dictionary of an
-// XML property list.
-func plistStrings(data []byte) (map[string]string, error) {
+// plistTopLevel returns the string values of the top-level dictionary of an
+// XML property list, and the keys it has, of any type.
+func plistTopLevel(data []byte) (map[string]string, map[string]bool, error) {
 	d := xml.NewDecoder(bytes.NewReader(data))
 	vals := make(map[string]string)
+	present := make(map[string]bool)
 	depth := 0
 	key := ""
 	for {
 		t, err := d.Token()
 		if err == io.EOF {
-			return vals, nil
+			return vals, present, nil
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		switch t := t.(type) {
 		case xml.StartElement:
@@ -178,9 +190,21 @@ func plistStrings(data []byte) (map[string]string, error) {
 			if depth != 3 {
 				continue
 			}
+			if t.Name.Local != "key" && key != "" {
+				present[key] = true
+			}
+			if t.Name.Local != "key" && t.Name.Local != "string" {
+				// A dictionary or array value: skip its contents.
+				if err := d.Skip(); err != nil {
+					return nil, nil, err
+				}
+				depth--
+				key = ""
+				continue
+			}
 			var s string
 			if err := d.DecodeElement(&s, &t); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			depth--
 			switch t.Name.Local {
@@ -188,8 +212,6 @@ func plistStrings(data []byte) (map[string]string, error) {
 				key = s
 			case "string":
 				vals[key] = s
-				key = ""
-			default:
 				key = ""
 			}
 		case xml.EndElement:
