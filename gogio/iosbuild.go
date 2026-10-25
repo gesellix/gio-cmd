@@ -22,14 +22,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	minIOSVersion = 10
-	// Some Metal features require tvOS 11
-	minTVOSVersion = 11
-	// Metal is available from iOS 8 on devices, yet from version 13 on the
-	// simulator.
-	minSimulatorVersion = 13
-)
+// minIOSVersion is the oldest iOS and tvOS version Gio supports, on
+// devices and simulators: Gio uses the UIScene life cycle of iOS 13.
+const minIOSVersion = 13
+
+// iosMinSDK returns the minimum iOS or tvOS version to build for: the
+// -minsdk flag, but not below minIOSVersion.
+func iosMinSDK(bi *buildInfo) int {
+	return max(bi.minsdk, minIOSVersion)
+}
 
 func buildIOS(tmpDir, target string, bi *buildInfo) error {
 	appName := bi.name
@@ -196,14 +197,11 @@ func exeIOS(tmpDir, target, app string, bi *buildInfo) error {
 	lipo := exec.Command("xcrun", "lipo", "-o", exe, "-create")
 	var builds errgroup.Group
 	for _, a := range bi.archs {
-		clang, cflags, err := iosCompilerFor(target, a, bi.minsdk)
+		clang, cflags, err := iosCompilerFor(target, a, iosMinSDK(bi))
 		if err != nil {
 			return err
 		}
-		cflags = append(cflags,
-			"-fobjc-arc",
-			fmt.Sprintf("-miphoneos-version-min=%d.0", bi.minsdk),
-		)
+		cflags = append(cflags, "-fobjc-arc")
 		cflagsLine := strings.Join(cflags, " ")
 		exeSlice := filepath.Join(tmpDir, "app-"+a)
 		lipo.Args = append(lipo.Args, exeSlice)
@@ -330,15 +328,11 @@ func iosIcons(bi *buildInfo, tmpDir, appDir, icon string) (string, error) {
 	}
 	assetPlist := filepath.Join(tmpDir, "assets.plist")
 
-	minsdk := bi.minsdk
-	if minsdk == 0 {
-		minsdk = minIOSVersion
-	}
 	compile := exec.Command(
 		"actool",
 		"--compile", appDir,
 		"--platform", iosPlatformFor(bi.target),
-		"--minimum-deployment-target", strconv.Itoa(minsdk),
+		"--minimum-deployment-target", strconv.Itoa(iosMinSDK(bi)),
 		"--app-icon", "AppIcon",
 		"--output-partial-info-plist", assetPlist,
 		assets)
@@ -372,7 +366,7 @@ func buildInfoPlist(bi *buildInfo) string {
 		Version:         bi.version.StringCompact(),
 		VersionCode:     bi.version.VersionCode,
 		Platform:        platform,
-		MinVersion:      bi.minsdk,
+		MinVersion:      iosMinSDK(bi),
 		SupportPlatform: supportPlatform,
 		Schemes:         bi.schemes,
 	}
@@ -439,6 +433,11 @@ func buildInfoPlist(bi *buildInfo) string {
 	<string>10G8</string>
 	<key>UILaunchScreen</key>
 	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
     {{if .Schemes}}
 	<key>CFBundleURLTypes</key>
 	<array>
@@ -510,7 +509,7 @@ func archiveIOS(tmpDir, target, frameworkRoot string, bi *buildInfo) error {
 	var builds errgroup.Group
 	tags := bi.tags
 	for _, a := range bi.archs {
-		clang, cflags, err := iosCompilerFor(target, a, bi.minsdk)
+		clang, cflags, err := iosCompilerFor(target, a, iosMinSDK(bi))
 		if err != nil {
 			return err
 		}
@@ -580,18 +579,9 @@ func iosCompilerFor(target, arch string, minsdk int) (string, []string, error) {
 	switch arch {
 	case "arm", "arm64":
 		platformSDK += "os"
-		if minsdk == 0 {
-			minsdk = minIOSVersion
-			if target == "tvos" {
-				minsdk = minTVOSVersion
-			}
-		}
 	case "386", "amd64":
 		platformOS += "-simulator"
 		platformSDK += "simulator"
-		if minsdk == 0 {
-			minsdk = minSimulatorVersion
-		}
 	default:
 		return "", nil, fmt.Errorf("unsupported -arch: %s", arch)
 	}
