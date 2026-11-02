@@ -1,16 +1,16 @@
 module gioui.org/cmd
 
-go 1.24.1
+go 1.25.0
 
 require (
 	gioui.org v0.10.0
 	github.com/akavel/rsrc v0.10.1
 	github.com/chromedp/cdproto v0.0.0-20250429231605-6ed5b53462d4
 	github.com/chromedp/chromedp v0.13.6
-	golang.org/x/image v0.26.0
-	golang.org/x/sync v0.19.0
-	golang.org/x/text v0.32.0
-	golang.org/x/tools v0.39.0
+	golang.org/x/image v0.41.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/text v0.37.0
+	golang.org/x/tools v0.44.0
 )
 
 require (
@@ -23,7 +23,7 @@ require (
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/mod v0.30.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 )
